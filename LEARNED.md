@@ -137,22 +137,122 @@ world.step(1 / 60, undefined, 10); // サブステップでシミュレーショ
 * WebSocket 等を使った外部入力による物理制御
 * Three.js における Postprocessing や Bloom 等の視覚演出
 
+
 ---
-
-以上が現在までの進捗と習得内容のまとめです。
-このログは、開発進行と知識の蓄積において指針となるよう継続的に更新していきます。
-
-
 # 📘 LEARNED.md - Three.js + cannon-es 学習ログ
 
+## ✅ 導入・環境構築
 
-## 💡 パフォーマンス・構造についての考察
+* Vite + vanilla JavaScript 環境で Three.js を導入し、CDN ではなくモジュールベースで管理
+* cannon-es を併用し、クライアント上で物理演算を実行
 
-（略）
+## 🌐 Three.js の学び
 
-## 🧪 今後の拡張案
+* `WebGLRenderer`, `PerspectiveCamera`, `Scene` の基本構成を理解
+* `MeshStandardMaterial`, `MeshPhysicalMaterial` などマテリアルを変えることで質感の違いを表現
+* `AmbientLight`, `SpotLight` を使ったライティングとシャドウ設定の実践
+* `castShadow`, `receiveShadow`, `shadow.mapSize` などシャドウのリアリティ調整を実施
+* `CameraHelper`, `SpotLightHelper`, `AxesHelper` を用いて視覚的なデバッグ補助を行った
+* `OrbitControls` によりカメラの回転・ズームを操作可能に
+* `camera.position`, `camera.getWorldDirection` を定期的にログ出力して視点の追跡を可視化
 
-（略）
+## 🧱 物理エンジン（cannon-es）の学び
+
+* `World`, `Material`, `ContactMaterial`, `Body`, `Shape` などの基礎的な使い方
+* `restitution`, `friction`, `mass` によるボールの跳ね方・滑り方の調整
+* `linearDamping`, `angularDamping` で空気抵抗的な挙動を表現
+* `step(dt, undefined, substeps)` を使い、物理計算の精度を向上
+* Three.js のオブジェクトと cannon-es の Body を `.position.copy()` で同期
+
+## 📦 モジュール化方針（単一ファイル内）
+
+* `createRenderer`, `createCamera`, `createScene`, `createPhysicsWorld` など責務ごとに関数分離
+* `createSphere`, `createGround` で Three.js + cannon-es を組み合わせたオブジェクト生成を統一
+* `main()` 関数に統合して、構成要素の組み立てとループ管理を一箇所に集中
+
+## 🧾 コード全体構成と詳細解説
+
+（※以下略：既存内容そのまま）
+
+## ✨ 気づきと効果的だった設定
+
+### ✅ スポットライトによる影のリアリティ向上
+
+* `DirectionalLight` では影のサイズが常に一定で不自然だったが、`SpotLight` に切り替えることでカメラ距離・角度によって影が変形し、より自然になった。
+
+```js
+const spotLight = new THREE.SpotLight(0xffffff, 3);
+spotLight.angle = Math.PI / 3; // 広めの角度で明るく自然に
+spotLight.intensity = 4;       // ← 光量を上げたことで明るさが劇的に改善
+spotLight.position.set(2, 8, 4);
+spotLight.castShadow = true;
+```
+
+→ カメラを回転させた際にも影の形が変わるようになり、**立体感・現実感が増した。**
+→ `intensity` を上げることで暗く見えていたオブジェクトにも光が届き、視認性・演出効果ともに向上。
+
+---
+
+### ✅ 反発係数の調整でふわふわ感を解消
+
+* `restitution` を初期値の `0.9` にしていたところ、ボールが「ポヨンポヨン」と現実離れした跳ね方をした。
+* `0.5〜0.7` に調整したことで、**適度な反発感がありながらも落ち着いた動き**になった。
+
+```js
+const contactMaterial = new CANNON.ContactMaterial(
+  sphereMaterial,
+  groundMaterial,
+  {
+    restitution: 0.6,  // ← 現実的な弾み方に
+    friction: 0.4
+  }
+);
+```
+
+→ 「実際の球体が落ちるような感覚」が得られ、**視覚と運動の整合性が向上。**
+
+---
+
+### ✅ `mass` の調整と `step` の安定化
+
+* `mass: 1` の軽すぎるボールでは挙動が軽すぎて違和感。
+* `mass: 3` に変更し、`step(1/60, undefined, 10)` によって物理演算の安定度が上がった。
+
+```js
+world.step(1 / 60, undefined, 10); // サブステップでシミュレーションの精度を向上
+```
+
+→ 重みと滑らかさが両立し、**ふわふわせず自然な物理挙動に。**
+
+---
+
+## 📱 実験案：ジャイロセンサと WebSocket 連携
+
+### ✅ ジャイロ取得は `DeviceOrientationEvent` で行う
+
+Mac自体はジャイロセンサを搭載していないため、**ジャイロセンサを使いたい場合は iPhone / iPad のような実機端末が必要**。WebSocket と連携することで、センサーデバイスからの入力を PC 側に送信する構成が実現可能。
+
+```js
+// iPhone/iPad 側（センサーデータ送信）
+const socket = new WebSocket('ws://your-server');
+window.addEventListener('deviceorientation', (event) => {
+  socket.send(JSON.stringify({
+    alpha: event.alpha,
+    beta: event.beta,
+    gamma: event.gamma
+  }));
+});
+
+// Mac 側（センサーデータ受信）
+socket.onmessage = (msg) => {
+  const data = JSON.parse(msg.data);
+  console.log('受信したジャイロ:', data);
+};
+```
+
+* iOS Safari では `DeviceOrientationEvent.requestPermission()` が必要（ユーザー操作イベント内で）
+* Mac の Chrome 等ではジャイロは基本的に取得不可（センサ未搭載）
+* **iPad が研究室にあるため、今後実験的に利用予定**（WebSocket 経由で Three.js に影響を与える設計が可能）
 
 ---
 
