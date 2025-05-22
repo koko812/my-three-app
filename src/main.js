@@ -1,5 +1,7 @@
 // main.js
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'; // ← 追加
+
 
 // シーンの作成
 const scene = new THREE.Scene();
@@ -20,12 +22,18 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // ✅ ライト（照明）を追加：Three.jsでは物理ベースマテリアルにライトが必須
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // 環境光（全体に当たる）
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // 環境光（全体に当たる）
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 3); // 平行光源（太陽のような）
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // 平行光源（太陽のような）
 directionalLight.position.set(3, 3, 3);
 scene.add(directionalLight);
+
+// ✅ OrbitControls を設定
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; // 慣性
+controls.dampingFactor = 0.05; // 慣性の度合い
+controls.enableZoom = true;    // スクロールズーム有効（デフォルトで true ですが明示）
 
 // 立方体の作成
 // こういうところでオブジェクト化できるのが，凄腕プロラマーだということ（俺はできないのでカス）
@@ -63,6 +71,7 @@ function animate() {
     cube.position.y = Math.sin(cnt / 100 + Math.PI * 2 * i / cubeList.length) * 1.0 - 0.8
     cube.position.z = Math.sin(cnt / 100 + Math.PI * 2 * i / cubeList.length) * 3.0
   }
+  controls.update();           // ← 忘れずに追加
   renderer.render(scene, camera);
 }
 animate();
