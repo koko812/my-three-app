@@ -1,4 +1,6 @@
-# 📘 LEARNED.md - Three.js + cannon-es 学習ログ
+# 📘 LEARNED.md - Three.js + cannon-es 学習ログ 
+
+(2025-5-22-14:53 更新)
 
 ## ✅ 導入・環境構築
 
