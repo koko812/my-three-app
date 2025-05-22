@@ -29,6 +29,59 @@
 * `createSphere`, `createGround` で Three.js + cannon-es を組み合わせたオブジェクト生成を統一
 * `main()` 関数に統合して、構成要素の組み立てとループ管理を一箇所に集中
 
+
+## ✨ 気づきと効果的だった設定
+
+### ✅ スポットライトによる影のリアリティ向上
+
+* `DirectionalLight` では影のサイズが常に一定で不自然だったが、`SpotLight` に切り替えることでカメラ距離・角度によって影が変形し、より自然になった。
+
+```js
+const spotLight = new THREE.SpotLight(0xffffff, 3);
+spotLight.angle = Math.PI / 3; // 広めの角度で明るく自然に
+spotLight.intensity = 4;       // ← 光量を上げたことで明るさが劇的に改善
+spotLight.position.set(2, 8, 4);
+spotLight.castShadow = true;
+```
+
+→ カメラを回転させた際にも影の形が変わるようになり、**立体感・現実感が増した。**
+→ `intensity` を上げることで暗く見えていたオブジェクトにも光が届き、視認性・演出効果ともに向上。
+
+---
+
+### ✅ 反発係数の調整でふわふわ感を解消
+
+* `restitution` を初期値の `0.9` にしていたところ、ボールが「ポヨンポヨン」と現実離れした跳ね方をした。
+* `0.5〜0.7` に調整したことで、**適度な反発感がありながらも落ち着いた動き**になった。
+
+```js
+const contactMaterial = new CANNON.ContactMaterial(
+  sphereMaterial,
+  groundMaterial,
+  {
+    restitution: 0.6,  // ← 現実的な弾み方に
+    friction: 0.4
+  }
+);
+```
+
+→ 「実際の球体が落ちるような感覚」が得られ、**視覚と運動の整合性が向上。**
+
+---
+
+### ✅ `mass` の調整と `step` の安定化
+
+* `mass: 1` の軽すぎるボールでは挙動が軽すぎて違和感。
+* `mass: 3` に変更し、`step(1/60, undefined, 10)` によって物理演算の安定度が上がった。
+
+```js
+world.step(1 / 60, undefined, 10); // サブステップでシミュレーションの精度を向上
+```
+
+→ 重みと滑らかさが両立し、**ふわふわせず自然な物理挙動に。**
+
+---
+
 ## 🧾 コード全体構成と詳細解説
 
 ### 1. レンダラー作成 (`createRenderer`)
@@ -83,6 +136,23 @@
 * 複数オブジェクトの管理・シーン切り替え機構
 * WebSocket 等を使った外部入力による物理制御
 * Three.js における Postprocessing や Bloom 等の視覚演出
+
+---
+
+以上が現在までの進捗と習得内容のまとめです。
+このログは、開発進行と知識の蓄積において指針となるよう継続的に更新していきます。
+
+
+# 📘 LEARNED.md - Three.js + cannon-es 学習ログ
+
+
+## 💡 パフォーマンス・構造についての考察
+
+（略）
+
+## 🧪 今後の拡張案
+
+（略）
 
 ---
 
